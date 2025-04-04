@@ -55,14 +55,6 @@ const CreateAuctionDialog: React.FC<CreateAuctionDialogProps> = ({ className }) 
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
         {!isSubmitted ? (
           <div className="p-4">
-            <DialogHeader>
-              <DialogTitle className="text-2xl font-bold text-[#110407]">
-                Create Your <span className="text-[#AA8F66]">Auction</span>
-              </DialogTitle>
-              <DialogDescription className="text-[#5A3A31]">
-                Fill in the details of your auction item
-              </DialogDescription>
-            </DialogHeader>
             <div className="mt-6">
               <AuctionForm
                 onSubmit={handleAuctionSubmit}
