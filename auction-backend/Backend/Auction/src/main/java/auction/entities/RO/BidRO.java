@@ -15,6 +15,7 @@ public class BidRO {
     private UserRO customer;  // ✅ Updated "user" to "customer"
     private Long itemId;
     private Long customerId;  // ✅ Updated "userId" to "customerId"
+    private String imageBase64;  // Added field for image data
 
     public auction.entities.Bid toEntity(auction.entities.Item item, auction.entities.User customer) {
         return auction.entities.Bid.builder()

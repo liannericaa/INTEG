@@ -19,9 +19,11 @@ import {
   formatCurrency,
   formatTimeRemaining,
 } from "../../data/artworks";
+import { useAuth } from "@/lib/auth-context";
 
 const AuctionPage = () => {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const [artwork, setArtwork] = useState<Artwork | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -60,28 +62,67 @@ const AuctionPage = () => {
     });
   };
 
-  const handlePlaceBid = (amount: number) => {
+  const handlePlaceBid = async (amount: number) => {
     if (!artwork) return;
 
-    // In a real app, this would be sent to a backend API
-    const newBid = {
-      id: `b${Date.now()}`,
-      userId: "current-user",
-      userName: "You",
-      amount,
-      timestamp: new Date(),
-    };
+    try {
+      // First, fetch the image as base64
+      const imageResponse = await fetch(artwork.image);
+      const imageBlob = await imageResponse.blob();
+      const reader = new FileReader();
+      reader.readAsDataURL(imageBlob);
+      
+      const imageBase64 = await new Promise((resolve) => {
+        reader.onloadend = () => {
+          resolve(reader.result);
+        };
+      });
 
-    setArtwork({
-      ...artwork,
-      currentBid: amount,
-      bids: [...artwork.bids, newBid],
-    });
+      const response = await fetch('http://localhost:8080/api/bid', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          bidAmount: amount,
+          itemId: artwork.id,
+          customerId: user?.id,
+          imageBase64: imageBase64
+        })
+      });
 
-    toast({
-      title: "Bid placed",
-      description: `Your bid of ${formatCurrency(amount)} has been placed`,
-    });
+      if (!response.ok) {
+        throw new Error('Failed to place bid');
+      }
+
+      const bidData = await response.json();
+      
+      // Update local state with the new bid
+      setArtwork({
+        ...artwork,
+        currentBid: amount,
+        bids: [...artwork.bids, {
+          id: bidData.id,
+          userId: user?.id || '',
+          userName: user?.username || 'You',
+          amount,
+          timestamp: new Date(bidData.bidTime)
+        }],
+      });
+
+      toast({
+        title: "Bid placed",
+        description: `Your bid of ${formatCurrency(amount)} has been placed`,
+      });
+    } catch (error) {
+      console.error('Error placing bid:', error);
+      toast({
+        title: "Error",
+        description: "Failed to place bid. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   if (loading) {

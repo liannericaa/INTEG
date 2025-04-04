@@ -49,8 +49,10 @@ const mockTransactionHistory = [
 
 export default function BiddingHistory() {
   const { user } = useAuth();
-  const [transactions, setTransactions] = useState(mockTransactionHistory);
-  
+
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     // In a real application, you would fetch the user's transaction history here
     const timer = setTimeout(() => {
@@ -66,11 +68,23 @@ export default function BiddingHistory() {
         <div className="container py-8">
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4">Not Logged In</h1>
-            <p className="mb-4">Please log in to view your transaction history</p>
+            <p className="mb-4">Please log in to view your bidding history</p>
+            <p className="mb-4">Please log in to view your bidding history</p>
             <Button className="bg-[#AA8F66] hover:bg-[#AA8F66]/90 text-white" asChild>
               <a href="/login">Log In</a>
             </Button>
           </div>
+        </div>
+      </ClientLayout>
+    );
+  }
+
+
+  if (loading) {
+    return (
+      <ClientLayout>
+        <div className="container py-8 text-center">
+          <p>Loading your bidding history...</p>
         </div>
       </ClientLayout>
     );
@@ -114,81 +128,99 @@ export default function BiddingHistory() {
                 </Button>
               </div>
             ) : (
-              transactions.map((transaction) => (
-                <Card key={transaction.id} className="overflow-hidden border border-[#AA8F66]/20 hover:shadow-md transition-all duration-300">
-                  <div className="flex flex-col md:flex-row">
-                    <div className="md:w-48 h-48 bg-[#AA8F66]/10 flex-shrink-0">
-                      <img 
-                        src={transaction.image} 
-                        alt={transaction.title} 
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = "https://placehold.co/200x200/e9e3dd/aa8f66?text=Artwork";
-                        }}
-                      />
-                    </div>
-                    <div className="flex-1 p-4 md:p-6">
-                      <div className="flex flex-col md:flex-row justify-between">
-                        <div>
-                          <h3 className="text-xl font-bold text-[#5A3A31]">{transaction.title}</h3>
-                          <p className="text-[#5A3A31]/60">by {transaction.artist}</p>
-                          
-                          <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <p className="text-[#5A3A31]/60">Transaction Date</p>
-                              <p className="font-medium text-[#5A3A31]">
-                                {new Date(transaction.transactionDate).toLocaleDateString()}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-[#5A3A31]/60">Transaction ID</p>
-                              <p className="font-medium text-[#5A3A31]">{transaction.transactionId}</p>
-                            </div>
-                            <div>
-                              <p className="text-[#5A3A31]/60">Payment Method</p>
-                              <p className="font-medium text-[#5A3A31]">{transaction.paymentMethod}</p>
-                            </div>
-                            <div>
-                              <p className="text-[#5A3A31]/60">Bid Date</p>
-                              <p className="font-medium text-[#5A3A31]">
-                                {new Date(transaction.date).toLocaleDateString()}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="mt-4 md:mt-0 text-right">
+              transactions.map((transaction) => {
+                const item = transaction.item || {};
+                const imageUrl = item.image || "https://placehold.co/200x200/e9e3dd/aa8f66?text=Artwork";
+
+                return (
+                  <Card
+                    key={transaction.id}
+                    className="overflow-hidden border border-[#AA8F66]/20 hover:shadow-md transition-all duration-300"
+                  >
+                    <div className="flex flex-col md:flex-row">
+                      <div className="md:w-48 h-48 bg-[#AA8F66]/10 flex-shrink-0">
+                        <img
+                          src={imageUrl}
+                          alt={item.name || "Artwork"}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src =
+                              "https://placehold.co/200x200/e9e3dd/aa8f66?text=Artwork";
+                          }}
+                        />
+                      </div>
+                      <div className="flex-1 p-4 md:p-6">
+                        <div className="flex flex-col md:flex-row justify-between">
                           <div>
-                            <p className="text-[#5A3A31]/60 text-sm">Final Price</p>
-                            <div className="flex items-center justify-end">
-                              <DollarSign className="w-4 h-4 text-[#AA8F66]" />
-                              <span className="text-xl font-bold text-[#5A3A31]">
-                                {transaction.finalPrice.toLocaleString()}
-                              </span>
+                          <h3 className="text-xl font-bold text-[#5A3A31]">
+                              {item.name || "Unknown Item"}
+                            </h3>
+                            <p className="text-[#5A3A31]/60">
+                              by {transaction.sellerName || "Unknown Seller"}
+                            </p>
+
+                            <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <p className="text-[#5A3A31]/60">Transaction Date</p>
+                                <p className="font-medium text-[#5A3A31]">
+                                  {transaction.bidTime
+                                    ? new Date(transaction.bidTime).toLocaleDateString()
+                                    : "N/A"}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-[#5A3A31]/60">Transaction ID</p>
+                                <p className="font-medium text-[#5A3A31]">
+                                  {transaction.transactionId || "N/A"}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-[#5A3A31]/60">Bid Time</p>
+                                <p className="font-medium text-[#5A3A31]">
+                                  {transaction.bidTime
+                                    ? new Date(transaction.bidTime).toLocaleTimeString()
+                                    : "N/A"}
+                                </p>
+                              </div>
                             </div>
                           </div>
-                          <div className="mt-2">
-                            <p className="text-[#5A3A31]/60 text-sm">Your Bid</p>
-                            <div className="flex items-center justify-end">
-                              <DollarSign className="w-4 h-4 text-[#AA8F66]" />
-                              <span className="text-lg text-[#5A3A31]">
-                                {transaction.bidAmount.toLocaleString()}
-                              </span>
+                          <div className="mt-4 md:mt-0 text-right">
+                            <div>
+                              <p className="text-[#5A3A31]/60 text-sm">Final Price</p>
+                              <div className="flex items-center justify-end">
+                                <DollarSign className="w-4 h-4 text-[#AA8F66]" />
+                                <span className="text-xl font-bold text-[#5A3A31]">
+                                  {transaction.finalPrice
+                                    ? transaction.finalPrice.toLocaleString()
+                                    : "N/A"}
+                                </span>
+                              </div>
                             </div>
+                            <div className="mt-2">
+                              <p className="text-[#5A3A31]/60 text-sm">Your Bid</p>
+                              <div className="flex items-center justify-end">
+                                <DollarSign className="w-4 h-4 text-[#AA8F66]" />
+                                <span className="text-lg text-[#5A3A31]">
+                                  {transaction.bidAmount
+                                    ? transaction.bidAmount.toLocaleString()
+                                    : "N/A"}
+                                </span>
+                              </div>
+                            </div>
+                            <Button
+                              variant="outline"
+                              className="mt-4 border-[#AA8F66] text-[#AA8F66] hover:bg-[#AA8F66]/10"
+                              asChild
+                            >
+                              <a href={`/auctions/${item.id || "#"}`}>View Details</a>
+                            </Button>
                           </div>
-                          <Button 
-                            variant="outline" 
-                            className="mt-4 border-[#AA8F66] text-[#AA8F66] hover:bg-[#AA8F66]/10"
-                            asChild
-                          >
-                            <a href={`/auctions/${transaction.id}`}>View Details</a>
-                          </Button>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </Card>
-              ))
+                    </Card>
+                );
+              })
             )}
           </div>
         </div>

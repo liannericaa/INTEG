@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Artwork, formatCurrency } from '../data/artworks';
 import { Clock, TrendingUp } from 'lucide-react';
 import BidPaymentDialog from './BidPaymentDialog';
+import { toast } from 'sonner';
+import { useAuth } from '@/lib/auth-context';
 
 interface BiddingInterfaceProps {
   artwork: Artwork;
@@ -9,9 +11,36 @@ interface BiddingInterfaceProps {
 }
 
 const BiddingInterface: React.FC<BiddingInterfaceProps> = ({ artwork, onPlaceBid }) => {
-  const minBid = artwork.currentBid + Math.ceil(artwork.currentBid * 0.05); // Minimum 5% increase
-  const [bidAmount, setBidAmount] = useState(minBid);
+  const { user } = useAuth();
+  const [currentBid, setCurrentBid] = useState(artwork.currentBid);
+  const [bidAmount, setBidAmount] = useState(artwork.currentBid + 1);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  
+  // Fetch latest bid every 5 seconds
+  useEffect(() => {
+    const fetchLatestBid = async () => {
+      try {
+        const response = await fetch(`http://localhost:8080/api/bid/item/${artwork.id}`);
+        if (!response.ok) throw new Error('Failed to fetch latest bid');
+        
+        const bids = await response.json();
+        if (bids && bids.length > 0) {
+          const latestBid = Math.max(...bids.map((bid: any) => bid.bidAmount));
+          if (latestBid > currentBid) {
+            setCurrentBid(latestBid);
+            setBidAmount(latestBid + 1);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching latest bid:', error);
+      }
+    };
+
+    const interval = setInterval(fetchLatestBid, 5000); // Poll every 5 seconds
+    return () => clearInterval(interval);
+  }, [artwork.id, currentBid]);
+
+  const minBid = currentBid + Math.ceil(currentBid * 0.05); // Minimum 5% increase
   
   const handleBidChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value, 10);
@@ -21,21 +50,52 @@ const BiddingInterface: React.FC<BiddingInterfaceProps> = ({ artwork, onPlaceBid
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (bidAmount >= minBid) {
-      // Open payment dialog instead of directly placing bid
       setIsPaymentDialogOpen(true);
     }
   };
 
-  const handlePaymentComplete = () => {
-    onPlaceBid(bidAmount);
-    setIsPaymentDialogOpen(false);
+  const handlePaymentComplete = async () => {
+    if (!user) {
+      toast.error('Please log in to place a bid');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:8080/api/bid', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          itemId: artwork.id,
+          bidAmount: bidAmount,
+          customerId: user.id,
+          imageBase64: artwork.image
+        }),
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to place bid');
+      }
+
+      // Update local state with the new bid
+      setCurrentBid(bidAmount);
+      onPlaceBid(bidAmount);
+      setIsPaymentDialogOpen(false);
+      
+      toast.success('Bid placed successfully!');
+    } catch (error) {
+      console.error('Error placing bid:', error);
+      toast.error('Failed to place bid. Please try again.');
+    }
   };
 
   const getBidIncrements = () => {
     return [
       minBid,
-      minBid + Math.ceil(artwork.currentBid * 0.1),
-      minBid + Math.ceil(artwork.currentBid * 0.2)
+      minBid + Math.ceil(currentBid * 0.1),
+      minBid + Math.ceil(currentBid * 0.2)
     ];
   };
 
@@ -79,12 +139,12 @@ const BiddingInterface: React.FC<BiddingInterfaceProps> = ({ artwork, onPlaceBid
           
           <div className="flex justify-between items-center pb-3 border-b border-gray-200">
             <span className="text-sm text-[#5D4037]/80">Current Bid</span>
-            <span className="font-semibold text-[#5D4037]">{formatCurrency(artwork.currentBid)}</span>
+            <span className="font-semibold text-[#5D4037]">{formatCurrency(currentBid)}</span>
           </div>
           
           <div className="flex justify-between items-center pb-3 border-b border-gray-200">
             <span className="text-sm text-[#5D4037]/80">Bid Increment</span>
-            <span className="font-medium text-[#3E2723]">{formatCurrency(minBid - artwork.currentBid)}</span>
+            <span className="font-medium text-[#3E2723]">{formatCurrency(minBid - currentBid)}</span>
           </div>
           
           <div className="flex items-center gap-2 py-2">

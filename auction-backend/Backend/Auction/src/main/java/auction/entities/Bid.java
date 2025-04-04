@@ -29,10 +29,6 @@ public class Bid {
     private User customer;
 
     @ManyToOne(optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
-
-    @ManyToOne(optional = false)
     @JoinColumn(name = "seller_id", nullable = false)
     private User seller;
 
@@ -41,6 +37,12 @@ public class Bid {
 
     @Column(name = "bid_time", nullable = false, updatable = false)
     private LocalDateTime bidTime;
+
+    @Column(name = "final_price")
+    private BigDecimal finalPrice;
+
+    @Column(name = "image_base64", columnDefinition = "LONGTEXT")
+    private String imageBase64;
 
     @PrePersist
     protected void onCreate() {
@@ -52,9 +54,9 @@ public class Bid {
     public void updateFromRO(BidRO bidRO, Item item, User customer) {
         this.item = item;
         this.customer = customer;
-        this.user = customer;
-        this.seller = seller;
+        this.seller = item.getSeller();
         this.bidAmount = bidRO.getBidAmount();
         this.bidTime = LocalDateTime.now();
+        this.imageBase64 = bidRO.getImageBase64();
     }
 }

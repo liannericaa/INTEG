@@ -58,16 +58,15 @@ public class BidService {
             throw new IllegalArgumentException("Bidding is only allowed when the auction is ACTIVE.");
         }
 
-        User customer = userRepository.findById(bidRO.getCustomerId())
-                .orElseThrow(() -> new EntityNotFoundException("Customer not found"));
+        // Get the customer from the logged-in user
+        User customer = loggedInUser;
+        if (!customer.getId().equals(bidRO.getCustomerId())) {
+            throw new IllegalArgumentException("You can only place bids on behalf of your own account.");
+        }
 
         User seller = item.getSeller();
         if (seller == null) {
             throw new IllegalArgumentException("Item must have a seller before bidding.");
-        }
-
-        if (!loggedInUser.getId().equals(customer.getId())) {
-            throw new IllegalArgumentException("You can only place bids on behalf of your own account.");
         }
 
         if (customer.getRole() == Role.ADMIN) {
@@ -95,7 +94,6 @@ public class BidService {
 
         Bid bid = new Bid();
         bid.updateFromRO(bidRO, item, customer);
-        bid.setSeller(seller);
         bid.setBidTime(LocalDateTime.now());
 
         return bidRepository.save(bid);

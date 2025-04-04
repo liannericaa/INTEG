@@ -7,8 +7,10 @@ import {
   DollarSignIcon, 
   TagIcon, 
   InfoIcon, 
-  ClockIcon 
+  ClockIcon,
+  Image
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface AuctionFormProps {
   onSubmit: (auctionData: any) => void;
@@ -25,6 +27,7 @@ interface AuctionData {
   category: string;
   startTime: string;
   endTime: string;
+  imageBase64?: string;
 }
 
 const AuctionForm: React.FC<AuctionFormProps> = ({ 
@@ -34,14 +37,11 @@ const AuctionForm: React.FC<AuctionFormProps> = ({
 }) => {
   // Predefined categories with icons
   const categoriesWithIcons = [
-    { name: "Art", icon: "🎨" },
-    { name: "Collectibles", icon: "🏺" },
-    { name: "Electronics", icon: "💻" },
-    { name: "Fashion", icon: "👗" },
-    { name: "Furniture", icon: "🛋️" },
-    { name: "Jewelry", icon: "💍" },
-    { name: "Sports", icon: "⚽" },
-    { name: "Toys", icon: "🧸" },
+    { name: "Paintings", icon: "🖼️" },
+    { name: "Sculptures", icon: "🗿" },
+    { name: "Handicrafts", icon: "🧵" },
+    { name: "Photography", icon: "📸" },
+    { name: "Digital Art", icon: "💻" },
   ];
 
   // State management with initial data
@@ -54,6 +54,7 @@ const AuctionForm: React.FC<AuctionFormProps> = ({
     category: initialData.category || "",
     startTime: initialData.startTime || "",
     endTime: initialData.endTime || "",
+    imageBase64: initialData.imageBase64 || "",
   });
 
   // Dynamic form validation state
@@ -101,14 +102,40 @@ const AuctionForm: React.FC<AuctionFormProps> = ({
   };
 
   // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (validateForm()) {
-      setLoading(true);
+    if (!validateForm()) return;
+
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.itemName);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('startingPrice', formData.startingPrice.toString());
+      formDataToSend.append('bidIncrement', formData.increment?.toString() || '50');
+      formDataToSend.append('categoryId', formData.category);
+      formDataToSend.append('startTime', formData.startTime);
+      formDataToSend.append('endTime', formData.endTime);
+      if (formData.imageBase64) {
+        formDataToSend.append('image', formData.imageBase64);
+      }
+
+      const response = await fetch('http://localhost:8080/api/item', {
+        method: 'POST',
+        body: formDataToSend,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create auction');
+      }
+
+      toast.success('Auction created successfully');
       onSubmit(formData);
-      // Note: Actual loading state management should be handled by parent component
-      setTimeout(() => setLoading(false), 2000);
+    } catch (error) {
+      console.error('Error creating auction:', error);
+      toast.error('Failed to create auction');
     }
   };
 
@@ -134,6 +161,19 @@ const AuctionForm: React.FC<AuctionFormProps> = ({
         auctionType: type,
         increment: type === "open" ? undefined : 50
       }));
+    }
+  };
+
+  // Handle image upload
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        updateFormData('imageBase64', base64String);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -325,6 +365,31 @@ const AuctionForm: React.FC<AuctionFormProps> = ({
             />
             {errors.endTime && (
               <p className="text-red-500 text-xs mt-1">{errors.endTime}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Image Upload */}
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-sm font-medium text-[#110407]">
+            <Image className="w-4 h-4" /> Item Image
+          </label>
+          <div className="flex flex-col gap-4">
+            <Input 
+              type="file" 
+              accept="image/*"
+              onChange={handleImageUpload}
+              disabled={!isEditable}
+              className={`w-full ${!isEditable ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+            />
+            {formData.imageBase64 && (
+              <div className="relative w-full h-48 rounded-lg overflow-hidden border border-gray-200">
+                <img 
+                  src={formData.imageBase64} 
+                  alt="Preview" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
             )}
           </div>
         </div>
