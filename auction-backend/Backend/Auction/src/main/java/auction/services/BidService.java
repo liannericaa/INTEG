@@ -1,11 +1,19 @@
 package auction.services;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.stereotype.Service;
+
 import auction.entities.Bid;
 import auction.entities.Item;
+import auction.entities.RO.BidRO;
 import auction.entities.User;
 import auction.entities.enums.AuctionStatus;
 import auction.entities.enums.Role;
-import auction.entities.RO.BidRO;
 import auction.exceptions.ServiceException;
 import auction.repositories.BidRepository;
 import auction.repositories.ItemRepository;
@@ -13,13 +21,6 @@ import auction.repositories.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor

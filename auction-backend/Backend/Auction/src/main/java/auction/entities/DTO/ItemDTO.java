@@ -1,15 +1,16 @@
 package auction.entities.DTO;
 
-import auction.entities.Item;
-import auction.entities.enums.AuctionStatus;
-import auction.entities.enums.ItemStatus;
-import lombok.*;
-
 import java.io.Serial;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
+
+import auction.entities.Item;
+import auction.entities.enums.AuctionStatus;
+import auction.entities.enums.ItemStatus;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor

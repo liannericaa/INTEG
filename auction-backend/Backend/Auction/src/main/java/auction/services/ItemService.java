@@ -1,5 +1,11 @@
 package auction.services;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import auction.entities.Category;
 import auction.entities.DTO.ItemDTO;
 import auction.entities.Item;
@@ -16,11 +22,6 @@ import auction.repositories.UserRepository;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 @Slf4j
@@ -178,6 +179,14 @@ public class ItemService {
             log.info(MessageUtils.deleteSuccess("Item"));
         } catch (Exception e) {
             throw new ServiceException(MessageUtils.deleteError("Item"), e);
+        }
+    }
+
+    public List<Item> getItemsBySeller(Long sellerId) {
+        try {
+            return itemRepository.findBySellerId(sellerId);
+        } catch (Exception e) {
+            throw new ServiceException(MessageUtils.retrieveError("Seller Items"), e);
         }
     }
 

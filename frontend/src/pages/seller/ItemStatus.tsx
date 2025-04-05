@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import SellerLayout from '@/components/Layout/SellerLayout';
 import { Clock, CheckCircle, XCircle, DollarSign, CalendarX } from 'lucide-react';
+import { useAuth } from '@/lib/auth-context';
 
 interface Item {
   id: number;
@@ -11,6 +12,10 @@ interface Item {
   imageBase64: string | null;
   status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'SOLD' | 'EXPIRED';
   createdAt: string;
+  sellerId?: number;
+  seller?: {
+    id: number;
+  };
 }
 
 const ItemCard = ({ item }: { item: Item }) => {
@@ -32,21 +37,36 @@ const ItemStatus = () => {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState("PENDING");
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchItems = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+      
       try {
         setLoading(true);
-        const response = await axios.get('http://localhost:8080/api/item'); // Updated endpoint
+        const response = await axios.get('http://localhost:8080/api/item');
+        
+        let fetchedItems: Item[] = [];
         if (Array.isArray(response.data)) {
-          // If the response is an array, set it directly
-          setItems(response.data);
+          fetchedItems = response.data;
         } else if (response.data && response.data.data) {
-          // If the response has a data field, extract it
-          setItems(response.data.data);
+          fetchedItems = response.data.data;
         } else {
           console.error("Invalid API response:", response.data);
         }
+        
+        // Filter items to only show those belonging to the current seller
+        const sellerItems = fetchedItems.filter(item => {
+          // Check both possible formats for sellerId depending on API response structure
+          const itemSellerId = item.sellerId || (item.seller && item.seller.id);
+          return itemSellerId === parseInt(user.id);
+        });
+        
+        setItems(sellerItems);
       } catch (error) {
         console.error("Failed to fetch items:", error);
       } finally {
@@ -55,7 +75,7 @@ const ItemStatus = () => {
     };
 
     fetchItems();
-  }, []);
+  }, [user]);
 
   const statusData = {
     PENDING: {
@@ -84,6 +104,20 @@ const ItemStatus = () => {
       items: items.filter(item => item.status === 'EXPIRED')
     }
   };
+
+  // Show a message if the user is not logged in
+  if (!user) {
+    return (
+      <SellerLayout>
+        <div className="py-8">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Item Status</h1>
+            <p className="mb-4">Please log in as a seller to view your items</p>
+          </div>
+        </div>
+      </SellerLayout>
+    );
+  }
 
   return (
     <SellerLayout>

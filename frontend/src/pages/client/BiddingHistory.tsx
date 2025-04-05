@@ -3,64 +3,40 @@ import { useAuth } from "@/lib/auth-context";
 import ClientLayout from "@/components/ClientLayout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Trophy, Clock, DollarSign, ChevronRight } from "lucide-react";
-
-// Mock transaction history data
-const mockTransactionHistory = [
-  {
-    id: "1",
-    title: "Abstract Expressionism #45",
-    artist: "Emma Johnson",
-    date: "2024-02-15",
-    bidAmount: 1250,
-    finalPrice: 1250,
-    transactionDate: "2024-02-16",
-    paymentMethod: "Credit Card",
-    transactionId: "TRX-001",
-    image: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?ixlib=rb-4.0.3"
-  },
-  {
-    id: "2",
-    title: "Digital Landscape Series",
-    artist: "Carlos Mendez",
-    date: "2024-02-10",
-    bidAmount: 950,
-    finalPrice: 1100,
-    transactionDate: "2024-02-12",
-    paymentMethod: "PayPal",
-    transactionId: "TRX-002",
-    image: "https://images.unsplash.com/photo-1578301978018-3005759f48f7?ixlib=rb-4.0.3"
-  },
-  {
-    id: "3",
-    title: "Vintage Portrait Collection",
-    artist: "Sophia Chen",
-    date: "2024-02-05",
-    bidAmount: 2100,
-    finalPrice: 2100,
-    transactionDate: "2024-02-07",
-    paymentMethod: "Bank Transfer",
-    transactionId: "TRX-003",
-    image: "https://images.unsplash.com/photo-1579762715118-a6f1d4b934f1?ixlib=rb-4.0.3"
-  }
-];
+import { Clock, DollarSign } from "lucide-react";
 
 export default function BiddingHistory() {
   const { user } = useAuth();
-
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // In a real application, you would fetch the user's transaction history here
-    const timer = setTimeout(() => {
-      setTransactions(mockTransactionHistory);
-    }, 500);
-    
-    return () => clearTimeout(timer);
-  }, []);
+    if (user) {
+      fetch(`http://localhost:8080/api/bid/user/${user.id}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      })
+        .then((res) => {
+          if (!res.ok) {
+            throw new Error("Failed to fetch bidding history");
+          }
+          return res.json();
+        })
+        .then((data) => {
+          console.log('Bid data:', data);
+          setTransactions(data);
+        })
+        .catch((error) => {
+          console.error(error);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
+  }, [user]);
 
   if (!user) {
     return (
@@ -68,7 +44,6 @@ export default function BiddingHistory() {
         <div className="container py-8">
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4">Not Logged In</h1>
-            <p className="mb-4">Please log in to view your bidding history</p>
             <p className="mb-4">Please log in to view your bidding history</p>
             <Button className="bg-[#AA8F66] hover:bg-[#AA8F66]/90 text-white" asChild>
               <a href="/login">Log In</a>
@@ -79,7 +54,6 @@ export default function BiddingHistory() {
     );
   }
 
-
   if (loading) {
     return (
       <ClientLayout>
@@ -89,7 +63,7 @@ export default function BiddingHistory() {
       </ClientLayout>
     );
   }
-  
+
   return (
     <ClientLayout>
       <div>
@@ -121,8 +95,8 @@ export default function BiddingHistory() {
             {transactions.length === 0 ? (
               <div className="text-center py-12 bg-[#AA8F66]/5 rounded-xl border border-[#AA8F66]/10">
                 <Clock className="mx-auto h-12 w-12 text-[#AA8F66]/40" />
-                <h3 className="mt-4 text-xl font-semibold text-[#5A3A31]">No transactions found</h3>
-                <p className="mt-2 text-[#5A3A31]/60">Your transaction history will appear here</p>
+                <h3 className="mt-4 text-xl font-semibold text-[#5A3A31]">No bids found</h3>
+                <p className="mt-2 text-[#5A3A31]/60">Your bidding history will appear here</p>
                 <Button className="mt-6 bg-[#AA8F66] hover:bg-[#AA8F66]/90" asChild>
                   <a href="/auctions">Browse Auctions</a>
                 </Button>
@@ -131,7 +105,7 @@ export default function BiddingHistory() {
               transactions.map((transaction) => {
                 const item = transaction.item || {};
                 const imageUrl = item.image || "https://placehold.co/200x200/e9e3dd/aa8f66?text=Artwork";
-
+                
                 return (
                   <Card
                     key={transaction.id}
@@ -152,7 +126,7 @@ export default function BiddingHistory() {
                       <div className="flex-1 p-4 md:p-6">
                         <div className="flex flex-col md:flex-row justify-between">
                           <div>
-                          <h3 className="text-xl font-bold text-[#5A3A31]">
+                            <h3 className="text-xl font-bold text-[#5A3A31]">
                               {item.name || "Unknown Item"}
                             </h3>
                             <p className="text-[#5A3A31]/60">
@@ -184,6 +158,7 @@ export default function BiddingHistory() {
                               </div>
                             </div>
                           </div>
+
                           <div className="mt-4 md:mt-0 text-right">
                             <div>
                               <p className="text-[#5A3A31]/60 text-sm">Final Price</p>
@@ -212,13 +187,13 @@ export default function BiddingHistory() {
                               className="mt-4 border-[#AA8F66] text-[#AA8F66] hover:bg-[#AA8F66]/10"
                               asChild
                             >
-                              <a href={`/auctions/${item.id || "#"}`}>View Details</a>
+                              <a href={`/artwork/${item.id || "#"}`}>View Details</a>
                             </Button>
                           </div>
                         </div>
                       </div>
                     </div>
-                    </Card>
+                  </Card>
                 );
               })
             )}
@@ -227,4 +202,4 @@ export default function BiddingHistory() {
       </div>
     </ClientLayout>
   );
-} 
+}

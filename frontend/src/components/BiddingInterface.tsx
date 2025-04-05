@@ -16,7 +16,7 @@ const BiddingInterface: React.FC<BiddingInterfaceProps> = ({ artwork, onPlaceBid
   const [bidAmount, setBidAmount] = useState(artwork.currentBid + 1);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   
-  // Fetch latest bid every 5 seconds
+  // Fetch latest bid every 1 second
   useEffect(() => {
     const fetchLatestBid = async () => {
       try {
@@ -36,7 +36,7 @@ const BiddingInterface: React.FC<BiddingInterfaceProps> = ({ artwork, onPlaceBid
       }
     };
 
-    const interval = setInterval(fetchLatestBid, 5000); // Poll every 5 seconds
+    const interval = setInterval(fetchLatestBid, 0); // Poll every 1 seconds
     return () => clearInterval(interval);
   }, [artwork.id, currentBid]);
 
@@ -61,24 +61,40 @@ const BiddingInterface: React.FC<BiddingInterfaceProps> = ({ artwork, onPlaceBid
     }
 
     try {
+      const bidData = {
+        itemId: artwork.id,
+        bidAmount: bidAmount,
+        customerId: user.id,
+        imageBase64: artwork.image,
+        item: {
+          id: artwork.id,
+          name: artwork.title,
+          description: artwork.description,
+          startingPrice: artwork.startingBid,
+          currentBid: currentBid
+        },
+        customer: {
+          id: user.id,
+          username: user.username
+        }
+      };
+
       const response = await fetch('http://localhost:8080/api/bid', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          itemId: artwork.id,
-          bidAmount: bidAmount,
-          customerId: user.id,
-          imageBase64: artwork.image
-        }),
+        body: JSON.stringify(bidData),
         credentials: 'include'
       });
 
       if (!response.ok) {
-        throw new Error('Failed to place bid');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to place bid');
       }
 
+      const responseData = await response.json();
+      
       // Update local state with the new bid
       setCurrentBid(bidAmount);
       onPlaceBid(bidAmount);
@@ -87,7 +103,7 @@ const BiddingInterface: React.FC<BiddingInterfaceProps> = ({ artwork, onPlaceBid
       toast.success('Bid placed successfully!');
     } catch (error) {
       console.error('Error placing bid:', error);
-      toast.error('Failed to place bid. Please try again.');
+      toast.error(error instanceof Error ? error.message : 'Failed to place bid. Please try again.');
     }
   };
 

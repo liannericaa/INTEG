@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import SellerLayout from '@/components/Layout/SellerLayout';
 import { Calendar, PlayCircle, StopCircle, Image, Clock, CreditCard } from 'lucide-react';
+import { useAuth } from '@/lib/auth-context';
 
 interface Auction {
   id: string;
@@ -14,6 +15,10 @@ interface Auction {
   endDate: string;
   status: 'not-started' | 'active' | 'ended';
   bidCount: number;
+  sellerId?: number;
+  seller?: {
+    id: number;
+  };
   paymentDetails?: {
     transactionId: string;
     paymentMethod: string;
@@ -118,9 +123,15 @@ const AuctionStatus = () => {
   const [auctions, setAuctions] = useState<Auction[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState("not-started");
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchAuctions = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         const response = await axios.get('http://localhost:8080/api/item'); // Replace with your backend API endpoint
@@ -138,9 +149,18 @@ const AuctionStatus = () => {
             status: item.auctionStatus === 'NOT_STARTED' ? 'not-started' :
                     item.auctionStatus === 'ACTIVE' ? 'active' :
                     item.auctionStatus === 'ENDED' ? 'ended' : 'unknown',
-            bidCount: 0, // Replace with actual bid count if available
+            bidCount: 0, // Replace with actual bid count if available,
+            sellerId: item.sellerId,
+            seller: item.seller
           }));
-          setAuctions(mappedAuctions);
+
+          // Filter auctions to only show those belonging to the current seller
+          const sellerAuctions = mappedAuctions.filter(auction => {
+            const auctionSellerId = auction.sellerId || (auction.seller && auction.seller.id);
+            return auctionSellerId === parseInt(user.id);
+          });
+          
+          setAuctions(sellerAuctions);
         } else {
           console.error("Invalid API response:", response.data);
         }
@@ -152,7 +172,7 @@ const AuctionStatus = () => {
     };
   
     fetchAuctions();
-  }, []);
+  }, [user]);
 
   const statusData = {
     "not-started": {
@@ -171,6 +191,20 @@ const AuctionStatus = () => {
       items: auctions.filter(auction => auction.status === 'ended')
     }
   };
+
+  // Show a message if the user is not logged in
+  if (!user) {
+    return (
+      <SellerLayout>
+        <div className="py-8">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Auction Status</h1>
+            <p className="mb-4">Please log in as a seller to view your auctions</p>
+          </div>
+        </div>
+      </SellerLayout>
+    );
+  }
 
   return (
     <SellerLayout>
